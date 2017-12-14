@@ -21,10 +21,16 @@
         <maven.compiler.source>1.8</maven.compiler.source>
 
         <!-- Dependencies versions -->
+        <commons-io.version>2.6</commons-io.version>
         <debezium.version>0.5.1</debezium.version>
         <assertj.version>3.8.0</assertj.version>
         <guava.version>23.5-jre</guava.version>
+        <jackson.version>2.9.2</jackson.version>
         <junit.version>4.12</junit.version>
+        <rxjava-connector-kafka.version>0.3</rxjava-connector-kafka.version>
+        <rxjava-connector-slack.version>0.1</rxjava-connector-slack.version>
+        <rxjava-view-memory.version>0.3</rxjava-view-memory.version>
+        <slf4j.version>1.7.25</slf4j.version>
 
         <!-- Plugins versions -->
         <maven-compiler-plugin.version>3.6.1</maven-compiler-plugin.version>
@@ -36,11 +42,46 @@
         <nexus-staging-maven-plugin.version>1.6.5</nexus-staging-maven-plugin.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>com.github.hekonsek</groupId>
             <artifactId>rxjava-connector-kafka</artifactId>
-            <version>0.2</version>
+            <version>${rxjava-connector-kafka.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.hekonsek</groupId>
+            <artifactId>rxjava-connector-slack</artifactId>
+            <version>${rxjava-connector-slack.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.hekonsek</groupId>
+            <artifactId>rxjava-view-memory</artifactId>
+            <version>${rxjava-view-memory.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>${commons-io.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.7</version>
         </dependency>
         <dependency>
             <groupId>io.debezium</groupId>
@@ -52,11 +93,6 @@
             <artifactId>debezium-core</artifactId>
             <type>test-jar</type>
             <version>${debezium.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.6</version>
         </dependency>
 
         <dependency>
@@ -106,25 +142,28 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!--<plugin>-->
-                <!--<groupId>org.apache.maven.plugins</groupId>-->
-                <!--<artifactId>maven-enforcer-plugin</artifactId>-->
-                <!--<version>${maven-enforcer-plugin.version}</version>-->
-                <!--<executions>-->
-                    <!--<execution>-->
-                        <!--<id>enforce</id>-->
-                        <!--<configuration>-->
-                            <!--<rules>-->
-                                <!--<requireUpperBoundDeps />-->
-                            <!--</rules>-->
-                        <!--</configuration>-->
-                        <!--<goals>-->
-                            <!--<goal>enforce</goal>-->
-                        <!--</goals>-->
-                    <!--</execution>-->
-                <!--</executions>-->
-            <!--</plugin>-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce</id>
+                        <configuration>
+                            <rules>
+                                <requireUpperBoundDeps>
+                                    <excludes>
+                                        <exclude>org.apache.kafka:connect-api</exclude>
+                                    </excludes>
+                                </requireUpperBoundDeps>
+                            </rules>
+                        </configuration>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
