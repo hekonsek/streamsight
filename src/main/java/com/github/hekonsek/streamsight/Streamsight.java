@@ -1,7 +1,6 @@
 package com.github.hekonsek.streamsight;
 
 import com.github.hekonsek.rxjava.connector.kafka.KafkaSource;
-import com.github.hekonsek.rxjava.connector.slack.SlackSource;
 import com.github.hekonsek.rxjava.connector.slack.SlackTable;
 import com.github.hekonsek.rxjava.view.document.DocumentView;
 import com.github.hekonsek.rxjava.view.document.memory.InMemoryDocumentView;
@@ -22,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static com.github.hekonsek.rxjava.connector.slack.SlackSource.slackSource;
 import static com.github.hekonsek.rxjava.event.Headers.responseCallback;
 import static com.github.hekonsek.rxjava.view.document.MaterializeDocumentViewTransformation.materialize;
 import static io.vertx.core.json.Json.encodeToBuffer;
@@ -48,7 +48,7 @@ public class Streamsight {
         new KafkaSource<String, Map<String, Object>>(vertx, "metrics").build().
                 compose(materialize(shadowView)).
                 subscribe();
-        new SlackSource(slackToken, slackChannel).build().
+        slackSource(slackToken, slackChannel).build().
                 subscribe(event -> {
                     List<List<Object>> metricsRows = stream(shadowView.findAll("metrics").blockingIterable().spliterator(), true).
                             map(document -> asList(document.key(), document.document().get("value"))).collect(toList());
