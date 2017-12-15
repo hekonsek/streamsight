@@ -285,6 +285,10 @@
             <build>
                 <resources>
                     <resource>
+                        <directory>src/main/ansible</directory>
+                        <filtering>true</filtering>
+                    </resource>
+                    <resource>
                         <directory>src/main/docker</directory>
                         <filtering>true</filtering>
                     </resource>

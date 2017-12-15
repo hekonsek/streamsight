@@ -1,0 +1,23 @@
+- hosts: all
+  remote_user: fedora
+  become: true
+
+  roles:
+    - { role: hekonsek.fedora-firewall,0.5 }
+    - { role: hekonsek.fedora-firewall-port,0.1, vars: {targetPort: 8086}  }
+    - { role: hekonsek.fedora-docker,0.2 }
+
+  tasks:
+
+    - name: Start Streamsight server
+      docker_container:
+        name: streamsight
+        image: hekonsek/streamsight:${project.version}
+        state: started
+        network_mode: host
+        env:
+          "SLACK_TOKEN": '{{SLACK_TOKEN}}'
+          "SLACK_CHANNEL": '{{SLACK_CHANNEL}}'
+        volumes:
+          - /var/streamsight:/var/streamsight
+        restart_policy: unless-stopped
