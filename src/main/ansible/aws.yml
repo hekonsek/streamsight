@@ -1,0 +1,6 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - { role: hekonsek.fedora-ec2,0.11, vars: { instance_name: 't2.small', instance_ssd: false, instance_name: 'elo', group: 'elo' } }
+    - { role: hekonsek.ec2-firewall-port,0.3, vars: { group: 'elo', targetPort: 8086 } }

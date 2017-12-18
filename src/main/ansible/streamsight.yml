@@ -9,6 +9,9 @@
 
   tasks:
 
+    - name: Install docker-py
+      command: pip install docker-py
+
     - name: Start Streamsight server
       docker_container:
         name: streamsight
