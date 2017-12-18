@@ -1,15 +1,14 @@
 package com.github.hekonsek.streamsight;
 
-import com.github.hekonsek.rxjava.connector.http.HttpSourceFactory;
 import com.github.hekonsek.rxjava.connector.kafka.KafkaSource;
 import com.github.hekonsek.rxjava.connector.slack.SlackTable;
 import com.github.hekonsek.rxjava.view.document.DocumentView;
 import com.github.hekonsek.rxjava.view.document.memory.InMemoryDocumentView;
 import com.google.common.collect.ImmutableMap;
 import io.debezium.kafka.KafkaCluster;
-import io.vertx.kafka.client.producer.KafkaProducer;
-import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import io.vertx.reactivex.core.Vertx;
+import io.vertx.reactivex.kafka.client.producer.KafkaProducer;
+import io.vertx.reactivex.kafka.client.producer.KafkaProducerRecord;
 import org.apache.kafka.common.serialization.BytesSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.utils.Bytes;
@@ -32,10 +31,16 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
 
 public class Streamsight {
 
-    public static void main(String[] args) {
+    public static void main(String... args) {
         // Configuration
         String slackToken = System.getenv("SLACK_TOKEN");
+        if(slackToken == null) {
+            slackToken = System.getProperty("SLACK_TOKEN");
+        }
         String slackChannel = System.getenv("SLACK_CHANNEL");
+        if(slackChannel == null) {
+            slackChannel = System.getProperty("SLACK_CHANNEL");
+        }
 
         // Services
         startEmbeddedKafka();
@@ -43,7 +48,7 @@ public class Streamsight {
         DocumentView shadowView = new InMemoryDocumentView();
 
         // Telegraf pipe
-        KafkaProducer producer = KafkaProducer.create(vertx.getDelegate(), ImmutableMap.of(
+        KafkaProducer producer = KafkaProducer.create(vertx, ImmutableMap.of(
                 "bootstrap.servers", "localhost:9092",
                 "key.serializer", StringSerializer.class.getName(),
                 "value.serializer", BytesSerializer.class.getName()
@@ -67,11 +72,23 @@ public class Streamsight {
         // Slack bot pipe
         slackSource(slackToken, slackChannel).build().
                 subscribe(event -> {
-                    List<List<Object>> metricsRows = stream(shadowView.findAll("metrics").blockingIterable().spliterator(), true).
-                            map(document -> asList(document.key(), document.document().get("value"))).collect(toList());
-                    SlackTable metricsTable = new SlackTable("Metrics:", asList("Metric", "Value"), metricsRows);
-                    responseCallback(event).orElseThrow(() -> new IllegalStateException("No response callback found.")).
-                            respond(metricsTable);
+                    String command = event.payload().text();
+                    if (command.equals("metrics")) {
+                        List<List<Object>> metricsRows = stream(shadowView.findAll("metrics").blockingIterable().spliterator(), true).
+                                map(document -> asList(document.key(), document.document().get("value"))).collect(toList());
+                        SlackTable metricsTable = new SlackTable("Metrics:", asList("Metric", "Value"), metricsRows);
+                        responseCallback(event).orElseThrow(() -> new IllegalStateException("No response callback found.")).
+                                respond(metricsTable);
+                    } else if (command.startsWith("metrics clear ")) {
+                        String metricKey = command.replaceFirst("metrics clear ", "");
+                        producer.rxWrite(KafkaProducerRecord.create("metrics", metricKey, null)).doOnEvent((metadata, value) ->
+                                responseCallback(event).orElseThrow(() -> new IllegalStateException("No response callback found.")).
+                                respond(String.format("Metric %s has been cleared. :)", metricKey))
+                        ).subscribe();
+                    } else {
+                        responseCallback(event).orElseThrow(() -> new IllegalStateException("No response callback found.")).
+                                respond("Sorry, I can't recognize this command. :(");
+                    }
                 });
     }
 

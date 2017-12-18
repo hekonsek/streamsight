@@ -16,8 +16,8 @@
         state: started
         network_mode: host
         env:
-          "SLACK_TOKEN": '{{SLACK_TOKEN}}'
-          "SLACK_CHANNEL": '{{SLACK_CHANNEL}}'
+          "SLACK_TOKEN": "{{lookup('env', 'SLACK_TOKEN')}}"
+          "SLACK_CHANNEL": "{{lookup('env', 'SLACK_CHANNEL')}}"
         volumes:
           - /var/streamsight:/var/streamsight
         restart_policy: unless-stopped

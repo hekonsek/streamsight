@@ -133,6 +133,21 @@
     <build>
         <defaultGoal>clean install</defaultGoal>
 
+        <resources>
+            <resource>
+                <directory>src/main/ansible</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/docker</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -283,22 +298,6 @@
         <profile>
             <id>docker-build</id>
             <build>
-                <resources>
-                    <resource>
-                        <directory>src/main/ansible</directory>
-                        <filtering>true</filtering>
-                    </resource>
-                    <resource>
-                        <directory>src/main/docker</directory>
-                        <filtering>true</filtering>
-                    </resource>
-                    <resource>
-                        <directory>src/main/resources</directory>
-                        <filtering>true</filtering>
-                    </resource>
-
-                </resources>
-
                 <plugins>
                     <plugin>
                         <groupId>io.fabric8</groupId>
