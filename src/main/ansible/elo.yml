@@ -24,3 +24,25 @@
         volumes:
           - /var/streamsight:/var/streamsight
         restart_policy: unless-stopped
+
+    - name: Install Telegraf client
+      command: yum install -y https://dl.influxdata.com/telegraf/releases/telegraf-1.4.2-1.x86_64.rpm
+
+    - name: Disable per-CPU metrics
+      lineinfile:
+        path: /etc/telegraf/telegraf.conf
+        regexp: 'percpu = '
+        line: 'percpu = false'
+
+    - name: Enable CPU activity summary
+      lineinfile:
+        path: /etc/telegraf/telegraf.conf
+        regexp: 'report_active = '
+        line: 'report_active = true'
+
+    - name: Ensures telegraf is running
+      systemd:
+        name: telegraf
+        state: started
+        daemon_reload: true
+        enabled: yes

@@ -21,7 +21,7 @@ import java.util.Map;
 import static com.github.hekonsek.rxjava.connector.slack.SlackSource.slackSource;
 import static com.github.hekonsek.rxjava.event.Headers.responseCallback;
 import static com.github.hekonsek.rxjava.view.document.MaterializeDocumentViewTransformation.materialize;
-import static com.github.hekonsek.telegrafs.Telegrafs.activeTotalCpu;
+import static com.github.hekonsek.telegrafs.Telegrafs.parseLineProtocolRecords;
 import static io.vertx.core.json.Json.encodeToBuffer;
 import static io.vertx.reactivex.core.Vertx.vertx;
 import static java.util.Arrays.asList;
@@ -55,9 +55,11 @@ public class Streamsight {
         ));
         vertx.createHttpServer().requestHandler(request ->
                 request.bodyHandler(body -> {
-                    activeTotalCpu(body.getDelegate().getBytes()).subscribe(metric ->
+                    parseLineProtocolRecords(body.getDelegate().getBytes()).
+                            filter(record -> record.getMeasurement().equals("cpu") && record.getTags().containsValue("cpu-total")).
+                            subscribe(record ->
                             producer.write(KafkaProducerRecord.create("metrics", "localhost.cpu", new Bytes(encodeToBuffer(
-                                    new Metric<>("localhost.cpu", metric.getKey(), metric.getValue())
+                                    new Metric<>(record.getTags().get("host") + ".cpu", record.getTimestamp(), record.getFields().get("usage_active"))
                             ).getBytes())))
                     );
                     request.response().setStatusCode(204).end("OK");
