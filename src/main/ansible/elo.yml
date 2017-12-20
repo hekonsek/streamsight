@@ -17,8 +17,10 @@
         name: streamsight
         image: hekonsek/streamsight:${project.version}
         state: started
+        pull: true
         network_mode: host
         env:
+          "LOGGING_LEVEL": "{{lookup('env', 'LOGGING_LEVEL')|default('warn')}}"
           "SLACK_TOKEN": "{{lookup('env', 'SLACK_TOKEN')}}"
           "SLACK_CHANNEL": "{{lookup('env', 'SLACK_CHANNEL')}}"
         volumes:

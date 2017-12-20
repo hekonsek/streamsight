@@ -13,6 +13,7 @@ import io.vertx.reactivex.kafka.client.producer.KafkaProducerRecord;
 import org.apache.kafka.common.serialization.BytesSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.utils.Bytes;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,8 +31,11 @@ import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.StreamSupport.stream;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
+import static org.slf4j.LoggerFactory.getLogger;
 
 public class Streamsight {
+
+    private final static Logger log = getLogger(Streamsight.class);
 
     public Streamsight() {
         // Configuration
@@ -61,8 +65,12 @@ public class Streamsight {
         ));
         vertx.createHttpServer().requestHandler(request ->
                 request.bodyHandler(body -> {
+                    if(log.isDebugEnabled()) {
+                        log.debug("Received batch of line protocol event: {}", new String(body.getDelegate().getBytes()));
+                    }
                     parseLineProtocolRecords(body.getDelegate().getBytes()).
                             observeOn(scheduler(vertx)).
+                            subscribeOn(scheduler(vertx)).
                             flatMap(new LineProtocolRecordMapper(ImmutableMap.of(
                                     "record.tags.cpu == 'cpu-total'",
                                     "[metric(\"${record.tags.host}.cpu.usage_active\", record.timestamp, record.fields.usage_active)]",
@@ -71,7 +79,6 @@ public class Streamsight {
                                     "record.measurement == 'mem'",
                                     "[metric(\"${record.tags.host}.mem.available_percent\", record.timestamp, record.fields.available_percent)]"
                             ))).
-                            subscribeOn(scheduler(vertx)).
                             subscribe(metric ->
                                     producer.write(KafkaProducerRecord.create("metrics", metric.getKey(), new Bytes(encodeToBuffer(
                                             new Metric<>(metric.getKey(), metric.getTimestamp(), metric.getValue())
