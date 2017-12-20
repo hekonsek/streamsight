@@ -84,7 +84,7 @@ public class Streamsight {
                                             new Metric<>(metric.getKey(), metric.getTimestamp(), metric.getValue())
                                     ).getBytes())))
                             );
-                    request.response().setStatusCode(204).end("OK");
+                    request.response().setStatusCode(204).end("");
                 })
         ).listen(telegrafPort);
 
