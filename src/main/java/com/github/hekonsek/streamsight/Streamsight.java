@@ -4,6 +4,7 @@ import com.github.hekonsek.rxjava.connector.kafka.KafkaSource;
 import com.github.hekonsek.rxjava.connector.slack.SlackTable;
 import com.github.hekonsek.rxjava.view.document.DocumentView;
 import com.github.hekonsek.rxjava.view.document.memory.InMemoryDocumentView;
+import com.github.hekonsek.telegrafs.LineProtocolRecordMapper;
 import com.google.common.collect.ImmutableMap;
 import io.debezium.kafka.KafkaCluster;
 import io.vertx.reactivex.core.Vertx;
@@ -34,11 +35,11 @@ public class Streamsight {
     public static void main(String... args) {
         // Configuration
         String slackToken = System.getenv("SLACK_TOKEN");
-        if(slackToken == null) {
+        if (slackToken == null) {
             slackToken = System.getProperty("SLACK_TOKEN");
         }
         String slackChannel = System.getenv("SLACK_CHANNEL");
-        if(slackChannel == null) {
+        if (slackChannel == null) {
             slackChannel = System.getProperty("SLACK_CHANNEL");
         }
 
@@ -56,12 +57,13 @@ public class Streamsight {
         vertx.createHttpServer().requestHandler(request ->
                 request.bodyHandler(body -> {
                     parseLineProtocolRecords(body.getDelegate().getBytes()).
-                            filter(record -> record.getMeasurement().equals("cpu") && record.getTags().containsValue("cpu-total")).
-                            subscribe(record ->
-                            producer.write(KafkaProducerRecord.create("metrics", "localhost.cpu", new Bytes(encodeToBuffer(
-                                    new Metric<>(record.getTags().get("host") + ".cpu", record.getTimestamp(), record.getFields().get("usage_active"))
-                            ).getBytes())))
-                    );
+                            flatMap(new LineProtocolRecordMapper(ImmutableMap.of("record.tags.cpu == 'cpu-total'",
+                                    "[new com.github.hekonsek.telegrafs.FlatMetric(\"${record.tags.host}.cpu.total\", record.timestamp, record.fields.usage_active)]"))).
+                            subscribe(metric ->
+                                    producer.write(KafkaProducerRecord.create("metrics", metric.getKey(), new Bytes(encodeToBuffer(
+                                            new Metric<>(metric.getKey(), metric.getTimestamp(), metric.getValue())
+                                    ).getBytes())))
+                            );
                     request.response().setStatusCode(204).end("OK");
                 })
         ).listen(8086);
@@ -85,7 +87,7 @@ public class Streamsight {
                         String metricKey = command.replaceFirst("metrics clear ", "");
                         producer.rxWrite(KafkaProducerRecord.create("metrics", metricKey, null)).doOnEvent((metadata, value) ->
                                 responseCallback(event).orElseThrow(() -> new IllegalStateException("No response callback found.")).
-                                respond(String.format("Metric %s has been cleared. :)", metricKey))
+                                        respond(String.format("Metric %s has been cleared. :)", metricKey))
                         ).subscribe();
                     } else {
                         responseCallback(event).orElseThrow(() -> new IllegalStateException("No response callback found.")).

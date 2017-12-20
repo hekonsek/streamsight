@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import java.util.Date;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter @Setter @AllArgsConstructor @NoArgsConstructor
 public class Metric<T> {
 
     private String key;
