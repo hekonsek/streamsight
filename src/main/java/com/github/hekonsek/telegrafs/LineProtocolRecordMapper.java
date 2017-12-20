@@ -4,6 +4,8 @@ import groovy.lang.GroovyShell;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.functions.Function;
+import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.customizers.ImportCustomizer;
 
 import java.util.List;
 import java.util.Map;
@@ -18,9 +20,10 @@ public class LineProtocolRecordMapper implements Function<LineProtocolRecord, Ob
     }
 
     @Override public ObservableSource<FlatMetric> apply(LineProtocolRecord lineProtocolRecord) {
+        GroovyShell groovy = groovy(lineProtocolRecord);
         List<FlatMetric> matching = rules.entrySet().stream().
-                filter( entry -> (boolean) groovy(lineProtocolRecord).evaluate(entry.getKey())).
-                flatMap(entry -> ((List<FlatMetric>) groovy(lineProtocolRecord).evaluate(entry.getValue())).stream()).
+                filter( entry -> (boolean) groovy.evaluate(entry.getKey())).
+                flatMap(entry -> ((List<FlatMetric>) groovy.evaluate(entry.getValue())).stream()).
                 collect(Collectors.toList());
         if(matching.isEmpty()) {
             return Observable.empty();
@@ -30,7 +33,11 @@ public class LineProtocolRecordMapper implements Function<LineProtocolRecord, Ob
     }
 
     private GroovyShell groovy(LineProtocolRecord record) {
-        GroovyShell shell = new GroovyShell();
+        ImportCustomizer importCustomizer = new ImportCustomizer();
+        importCustomizer.addStaticStars(FlatMetric.class.getName());
+        CompilerConfiguration configuration = new CompilerConfiguration();
+        configuration.addCompilationCustomizers(importCustomizer);
+        GroovyShell shell = new GroovyShell(configuration);
         shell.setVariable("record", record);
         return shell;
     }

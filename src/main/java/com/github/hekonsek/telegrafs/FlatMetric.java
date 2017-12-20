@@ -16,6 +16,10 @@ public class FlatMetric<T> {
         this.value = value;
     }
 
+    public static <T> FlatMetric<T> metric(String key, Date timestamp, T value) {
+        return new FlatMetric<>(key, timestamp, value);
+    }
+
     public String getKey() {
         return key;
     }

@@ -58,7 +58,7 @@ public class Streamsight {
                 request.bodyHandler(body -> {
                     parseLineProtocolRecords(body.getDelegate().getBytes()).
                             flatMap(new LineProtocolRecordMapper(ImmutableMap.of("record.tags.cpu == 'cpu-total'",
-                                    "[new com.github.hekonsek.telegrafs.FlatMetric(\"${record.tags.host}.cpu.total\", record.timestamp, record.fields.usage_active)]"))).
+                                    "[metric(\"${record.tags.host}.cpu.total\", record.timestamp, record.fields.usage_active)]"))).
                             subscribe(metric ->
                                     producer.write(KafkaProducerRecord.create("metrics", metric.getKey(), new Bytes(encodeToBuffer(
                                             new Metric<>(metric.getKey(), metric.getTimestamp(), metric.getValue())
