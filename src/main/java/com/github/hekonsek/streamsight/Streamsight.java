@@ -63,8 +63,12 @@ public class Streamsight {
                 request.bodyHandler(body -> {
                     parseLineProtocolRecords(body.getDelegate().getBytes()).
                             observeOn(scheduler(vertx)).
-                            flatMap(new LineProtocolRecordMapper(ImmutableMap.of("record.tags.cpu == 'cpu-total'",
-                                    "[metric(\"${record.tags.host}.cpu.total\", record.timestamp, record.fields.usage_active)]"))).
+                            flatMap(new LineProtocolRecordMapper(ImmutableMap.of(
+                                    "record.tags.cpu == 'cpu-total'",
+                                    "[metric(\"${record.tags.host}.cpu.usage_active\", record.timestamp, record.fields.usage_active)]",
+                                    "record.measurement == 'diskio'",
+                                    "[metric(\"${record.tags.host}.diskio.${record.tags.name}.io_time\", record.timestamp, record.fields.io_time)]"
+                            ))).
                             subscribe(metric ->
                                     producer.write(KafkaProducerRecord.create("metrics", metric.getKey(), new Bytes(encodeToBuffer(
                                             new Metric<>(metric.getKey(), metric.getTimestamp(), metric.getValue())
