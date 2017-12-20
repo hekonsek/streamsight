@@ -67,8 +67,11 @@ public class Streamsight {
                                     "record.tags.cpu == 'cpu-total'",
                                     "[metric(\"${record.tags.host}.cpu.usage_active\", record.timestamp, record.fields.usage_active)]",
                                     "record.measurement == 'diskio'",
-                                    "[metric(\"${record.tags.host}.diskio.${record.tags.name}.io_time\", record.timestamp, record.fields.io_time)]"
+                                    "[metric(\"${record.tags.host}.diskio.${record.tags.name}.io_time\", record.timestamp, record.fields.io_time)]",
+                                    "record.measurement == 'mem'",
+                                    "[metric(\"${record.tags.host}.mem.available_percent\", record.timestamp, record.fields.available_percent)]"
                             ))).
+                            subscribeOn(scheduler(vertx)).
                             subscribe(metric ->
                                     producer.write(KafkaProducerRecord.create("metrics", metric.getKey(), new Bytes(encodeToBuffer(
                                             new Metric<>(metric.getKey(), metric.getTimestamp(), metric.getValue())
