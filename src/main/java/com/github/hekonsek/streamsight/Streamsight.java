@@ -24,6 +24,7 @@ import static com.github.hekonsek.rxjava.event.Headers.responseCallback;
 import static com.github.hekonsek.rxjava.view.document.MaterializeDocumentViewTransformation.materialize;
 import static com.github.hekonsek.telegrafs.Telegrafs.parseLineProtocolRecords;
 import static io.vertx.core.json.Json.encodeToBuffer;
+import static io.vertx.reactivex.core.RxHelper.scheduler;
 import static io.vertx.reactivex.core.Vertx.vertx;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
@@ -32,7 +33,7 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
 
 public class Streamsight {
 
-    public static void main(String... args) {
+    public Streamsight() {
         // Configuration
         String slackToken = System.getenv("SLACK_TOKEN");
         if (slackToken == null) {
@@ -41,6 +42,10 @@ public class Streamsight {
         String slackChannel = System.getenv("SLACK_CHANNEL");
         if (slackChannel == null) {
             slackChannel = System.getProperty("SLACK_CHANNEL");
+        }
+        Integer telegrafPort = System.getenv("TELEGRAF_PORT") != null ? Integer.parseInt(System.getenv("TELEGRAF_PORT")) : null;
+        if (telegrafPort == null) {
+            telegrafPort = Integer.parseInt(System.getProperty("TELEGRAF_PORT", "8086"));
         }
 
         // Services
@@ -57,6 +62,7 @@ public class Streamsight {
         vertx.createHttpServer().requestHandler(request ->
                 request.bodyHandler(body -> {
                     parseLineProtocolRecords(body.getDelegate().getBytes()).
+                            observeOn(scheduler(vertx)).
                             flatMap(new LineProtocolRecordMapper(ImmutableMap.of("record.tags.cpu == 'cpu-total'",
                                     "[metric(\"${record.tags.host}.cpu.total\", record.timestamp, record.fields.usage_active)]"))).
                             subscribe(metric ->
@@ -66,7 +72,7 @@ public class Streamsight {
                             );
                     request.response().setStatusCode(204).end("OK");
                 })
-        ).listen(8086);
+        ).listen(telegrafPort);
 
         // Kafka metrics pipe
         new KafkaSource<String, Map<String, Object>>(vertx, "metrics").build().
@@ -107,6 +113,10 @@ public class Streamsight {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void main(String[] args) {
+        new Streamsight();
     }
 
 }
